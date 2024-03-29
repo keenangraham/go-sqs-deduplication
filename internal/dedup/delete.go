@@ -13,6 +13,11 @@ type Deleter struct {
 }
 
 
+func (d *Deleter) SetDeleteChannel(deleteChannel chan string) {
+    d.deleteChannel = deleteChannel
+}
+
+
 func (d *Deleter) getBatchOfMessagesToDelete() []string {
     maxMessages := 10
     var messages []string

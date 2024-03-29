@@ -49,7 +49,7 @@ func NewDeduplicator(config *DeduplicatorConfig) *Deduplicator {
 }
 
 
-func (d *Deduplicator) createPullers() {
+func (d *Deduplicator) initPullers() {
     numWorkers := d.config.NumWorkers
     pullers := make([]*Puller, 0, numWorkers)
     for i := 0; i < numWorkers; i++ {
@@ -66,7 +66,8 @@ func (d *Deduplicator) createPullers() {
 }
 
 
-func (d *Deduplicator) createDeleters() {
+func (d *Deduplicator) initDeleters() {
+    d.initDeleteChannel()
     numWorkers := d.config.NumWorkers
     deleters := make([]*Deleter, 0, numWorkers)
     for i := 0; i < numWorkers; i++ {
@@ -81,7 +82,8 @@ func (d *Deduplicator) createDeleters() {
 }
 
 
-func (d *Deduplicator) createReseters() {
+func (d *Deduplicator) initReseters() {
+    d.initKeepChannel()
     numWorkers := d.config.NumWorkers
     reseters := make([]*Reseter, 0, numWorkers)
     for i := 0; i < numWorkers; i++ {
@@ -96,13 +98,36 @@ func (d *Deduplicator) createReseters() {
 }
 
 
-func (d *Deduplicator) createKeepChannel() {
+func (d *Deduplicator) startPullers() {
+      startAll(d.pullers)
+}
+
+
+func (d *Deduplicator) startDeleters() {
+      startAll(d.deleters)
+}
+
+
+func (d *Deduplicator) startReseters() {
+      startAll(d.reseters)
+}
+
+
+func (d *Deduplicator) initKeepChannel() {
     d.keepChannel = make(chan string, 10000)
 }
 
 
-func (d *Deduplicator) createDeleteChannel() {
-    d.deleteChannel = make(chan string, 100000)
+func (d *Deduplicator) initDeleteChannel() {
+    d.deleteChannel = make(chan string, 10000)
+}
+
+
+func (d *Deduplicator) resetDeleteChannel() {
+    d.initDeleteChannel()
+    for _, deleter := range d.deleters {
+        deleter.SetDeleteChannel(d.deleteChannel)
+    }
 }
 
 
@@ -116,7 +141,7 @@ func (d *Deduplicator) queueEmpty() bool {
 }
 
 
-func (d *Deduplicator) sendMessagesToDelete() {
+func (d *Deduplicator) sendMessagesForDeletion() {
     d.wg.Add(1)
     go func() {
         defer d.wg.Done()
@@ -131,7 +156,7 @@ func (d *Deduplicator) sendMessagesToDelete() {
 }
 
 
-func (d *Deduplicator) sendMessagesToResetVisibility() {
+func (d *Deduplicator) sendMessagesForVisibilityReset() {
     d.wg.Add(1)
     go func() {
         defer d.wg.Done()
@@ -164,56 +189,49 @@ func (d *Deduplicator) atMaxInflight() bool {
 }
 
 
-func (d *Deduplicator) Run() {
+func (d *Deduplicator) waitForWorkToFinish() {
+    d.wg.Wait()
+}
 
-    fmt.Println("Running loop")
-    
-    d.createPullers()
 
-    // Run pull message/delete duplicates loop until no more messages, or
-    // max inflight of unique messages reached.
+func (d *Deduplicator) pullMessagesAndDeleteDuplicates() {
+    d.initPullers()
+    d.initDeleters()
+    // Run pull message/delete duplicates loop until no more
+    // messages in queue, or max inflight of unique messages reached.
     for {
         fmt.Println("Pulling Messages")
-
-        startAll(d.pullers)
-        
-        d.wg.Wait() // Wait for senders
-
-        d.printInfo() // How many messages to keep/delete
-        
-        d.createDeleteChannel() //create new delete channel
-
-        d.createDeleters() // create deleters
-        
-        startAll(d.deleters) // start deleters
-        
-        d.sendMessagesToDelete() // send messages to deleters
-        
-        d.wg.Wait() // Wait for deleters and delete sender
-
+        d.startPullers() // Pulls messages until max inflight reached, or no more messages. Determines duplicates.
+        d.waitForWorkToFinish()
+        d.printInfo()
+        d.sendMessagesForDeletion()
+        d.startDeleters() // Processes messages for deletion.
+        d.waitForWorkToFinish()
         if d.queueEmpty() {
-            fmt.Println("Queue empty")
+            fmt.Println("Pulled all messages from queue")
             break
         }
-
         if d.atMaxInflight() {
             fmt.Println("Max inflight for keep messages")
             break
         }
+        d.resetDeleteChannel() // Give deleters new channel since old one closed.
     }
+}
 
-    // Reset the visibility of messages to keep
+
+func (d *Deduplicator) resetVisibilityOnMessagesToKeep() {
+    d.initReseters()
+    d.sendMessagesForVisibilityReset()
+    d.startReseters() // Processes messages for visibility reset.
+    d.waitForWorkToFinish()
+}
+
+
+func (d *Deduplicator) Run() {
+    fmt.Println("Running deduplicator")
+    d.pullMessagesAndDeleteDuplicates()
     fmt.Println("Reseting visibility on messages to keep")
-    
-    d.createKeepChannel()
-    
-    d.createReseters()
-    
-    startAll(d.reseters)
-    
-    d.sendMessagesToResetVisibility()
-    
-    d.wg.Wait() // Wait for messages to reset
-    
+    d.resetVisibilityOnMessagesToKeep()
     fmt.Println("All done")
 }
