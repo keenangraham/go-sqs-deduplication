@@ -4,6 +4,7 @@ package dedup
 import (
     "fmt"
     "sync"
+    "time"
 )
 
 
@@ -204,6 +205,7 @@ func (d *Deduplicator) pullMessagesAndDeleteDuplicates() {
         d.startPullers() // Pulls messages until max inflight reached, or no more messages. Determines duplicates.
         d.waitForWorkToFinish()
         d.printInfo()
+        fmt.Println("Deleting duplicate messages")
         d.sendMessagesForDeletion()
         d.startDeleters() // Processes messages for deletion.
         d.waitForWorkToFinish()
@@ -234,4 +236,13 @@ func (d *Deduplicator) Run() {
     fmt.Println("Resetting visibility on messages to keep")
     d.resetVisibilityOnMessagesToKeep()
     fmt.Println("All done")
+}
+
+
+func (d *Deduplicator) RunForever(secondsToSleepBetweenRuns int) {
+    for {
+        d.Run()
+        fmt.Println("Sleeping seconds", secondsToSleepBetweenRuns)
+        time.Sleep(time.Duration(secondsToSleepBetweenRuns) * time.Second)
+    }
 }

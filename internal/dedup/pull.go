@@ -44,6 +44,7 @@ func (p *Puller) getMessagesUntilMaxInflight() {
         messages, err := p.queue.PullMessagesBatch()
         if err != nil {
             fmt.Println("Error pulling messages", err)
+            p.messagesExist = false
             return
         }
         if len(messages) == 0 {

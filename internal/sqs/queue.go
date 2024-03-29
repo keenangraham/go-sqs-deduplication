@@ -4,6 +4,7 @@ package sqs
 import (
     "fmt"
     "context"
+    "os"
     "github.com/aws/aws-sdk-go-v2/aws"
     _sqs "github.com/aws/aws-sdk-go-v2/service/sqs"
     "github.com/aws/aws-sdk-go-v2/service/sqs/types"
@@ -12,16 +13,16 @@ import (
 )
 
 
-func getClient(profileName string) (*_sqs.Client, error) {
+func getClient(profileName string) *_sqs.Client {
     config, err := config.LoadDefaultConfig(
          context.TODO(), 
          config.WithSharedConfigProfile(profileName),
     )
     if err != nil {
-        fmt.Println(err)
-        return nil, err
+        fmt.Println("error creating SQS client", err)
+        os.Exit(1)
     }
-    return _sqs.NewFromConfig(config), err
+    return _sqs.NewFromConfig(config)
 }
 
 
@@ -33,11 +34,7 @@ type QueueConfig struct {
 
 
 func NewQueue(queueConfig *QueueConfig) *Queue {
-    client, err := getClient(queueConfig.ProfileName)
-    if err != nil {
-        fmt.Println("Error creating SQS client", err)
-        return nil
-    }
+    client := getClient(queueConfig.ProfileName)
     return &Queue{
         client: client,
         config: queueConfig,
