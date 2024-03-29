@@ -231,7 +231,7 @@ func (d *Deduplicator) resetVisibilityOnMessagesToKeep() {
 func (d *Deduplicator) Run() {
     fmt.Println("Running deduplicator")
     d.pullMessagesAndDeleteDuplicates()
-    fmt.Println("Reseting visibility on messages to keep")
+    fmt.Println("Resetting visibility on messages to keep")
     d.resetVisibilityOnMessagesToKeep()
     fmt.Println("All done")
 }
