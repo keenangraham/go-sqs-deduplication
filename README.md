@@ -2,6 +2,20 @@
 
 ### Usage
 
+Note the deduplicator expects SQS messages in following format:
+
+```json
+{
+    "data": {
+        "uuid": "abc123"
+     }
+}
+```
+
+Where `uuid` is the unique identifier used to deduplicate messages.
+
+The code can be extended to work with other queues or message formats.
+
 Run once:
 ```bash
 go run cmd/dedup.go -queueURL=someURL -numWorkers=100  -profileName=someProfile
