@@ -173,8 +173,8 @@ func (d *Deduplicator) sendMessagesForVisibilityReset() {
 
 func (d *Deduplicator) printInfo() {
     d.state.mu.Lock()
-    fmt.Println("Messages to keep:", len(d.state.keepMessages))
-    fmt.Println("Messages to delete:", len(d.state.deleteMessages))
+    fmt.Println("Unique messages to keep:", len(d.state.keepMessages))
+    fmt.Println("Duplicate messages to delete:", len(d.state.deleteMessages))
     d.state.mu.Unlock()
 }
 
