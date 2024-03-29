@@ -8,10 +8,11 @@ import (
 
 
 type Puller struct {
-    wg *sync.WaitGroup
-    state *SharedState
     queue Queue
+    state *SharedState
     messagesExist bool
+    maxInflight int
+    wg *sync.WaitGroup
 }
 
 
@@ -33,7 +34,7 @@ func (p *Puller) processMessages(messages []QueueMessage) {
 
 // Only call with mutex locked.
 func (p *Puller) atMaxInflight() bool {
-    return len(p.state.keepMessages) + len(p.state.deleteMessages) >= p.state.maxInflightMessages
+    return len(p.state.keepMessages) + len(p.state.deleteMessages) >= p.maxInflight
 }
 
 

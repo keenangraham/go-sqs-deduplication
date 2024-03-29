@@ -3,133 +3,111 @@ package dedup
 
 import (
     "fmt"
+    "sync"
 )
 
 
-type Deduplicator struct {
-    numWorkers int
-    maxInflight int
-    queue Queue
+type Startable interface {
+    Start()
 }
 
 
-func (d *Deduplicator) Run() {
-    fmt.Println("Running loop")
-    numWorkers := 40
-    maxInflight := 100000
-    queueUrl := "https://sqs.us-west-2.amazonaws.com/618537831167/test-queue"
-    config, err := config.LoadDefaultConfig(
-        context.TODO(), 
-        config.WithSharedConfigProfile("default"),
-    )
-    if err != nil {
-        fmt.Println(err)
-        return
+func startAll(actors []*Startable) {
+    for _, actor := range actors {
+        actor.Start()
     }
-    client := sqs.NewFromConfig(config)
+}
 
-    var wg sync.WaitGroup
-    state := SharedState{
-        keepMessages: make(map[string]SQSMessage),
-        deleteMessages: make(map[string]struct{}),
-        wg: &wg,
-        maxInflightMessages: maxInflight,
-    }
-    var pullers []*Puller
+
+type DeduplicatorConfig struct {
+    queue Queue
+    numWorkers int
+    maxInflight int
+}
+
+
+type Deduplicator struct {
+    config *DeduplicatorConfig
+    wg *sync.WaitGroup
+    state *SharedState
+    pullers []*Puller
+    deleters []*Deleter
+    reseters []*Reseter
+    keepChannel chan string
+    deleteChannel chan string
+}
+
+
+func NewDeduplicator(config *DeduplicatorConfig) *Deduplicator {
+    return &Deduplicator{
+        config: config,
+        wg: &sync.WaitGroup{},
+        state: &SharedState{
+            keepMessages: make(map[string]QueueMessage),
+            deleteMessages: make(map[string]struct{}),
+        }}
+}
+
+
+func (d *Deduplicator) createPullers() {
+    numWorkers := d.config.numWorkers
+    pullers := make([]*Puller, 0, numWorkers)
     for i := 0; i < numWorkers; i++ {
-        puller := Puller{
-            state: &state,
+        puller := &Puller{
+            queue: d.config.queue,
+            state: d.state,
+            wg: d.wg,
             messagesExist: true,
-            client: client,
-            queueUrl: &queueUrl,
+            maxInflight: d.config.maxInflight,
         }
-        pullers = append(pullers, &puller)
+        pullers = append(pullers, puller)
     }
-    for {
-        fmt.Println("Pulling Messages")
-        for _, puller := range pullers {
-            puller.Start()
-        }
-        wg.Wait()
-        state.lock.Lock()
-        fmt.Println("Messages to keep:", len(state.keepMessages))
-        fmt.Println("Messages to delete:", len(state.deleteMessages))
-        state.lock.Unlock()
+    d.pullers = pullers
+}
 
-        fmt.Println("Deleting duplicates")
-        deleteChannel := make(chan string, 10000)
-        wg.Add(1)
-        go func() {
-            defer wg.Done()
-            state.lock.Lock()
-            defer state.lock.Unlock()
-            for receiptHandle := range state.deleteMessages {
-                deleteChannel <- receiptHandle
-            }
-            state.deleteMessages = make(map[string]struct{})
-            close(deleteChannel)
-        }()
-        var deleters []*Deleter
-        for i := 0; i < numWorkers; i++ {
-            deleter := Deleter{
-                state: &state,
-                client: client,
-                queueUrl: &queueUrl,
-                deleteChannel: deleteChannel,
-            }
-            deleters = append(deleters, &deleter)
-        }
-        for _, deleter := range deleters{
-            deleter.Start()
-        }
-        wg.Wait()
 
-        if queueEmpty(pullers) {
-            fmt.Println("Queue empty")
-            break
+func (d *Deduplicator) createDeleters() {
+    numWorkers := d.config.numWorkers
+    deleters := make([]*Deleter, 0, numWorkers)
+    for i := 0; i < numWorkers; i++ {
+        deleter := &Deleter{
+            queue: d.config.queue,
+            deleteChannel: d.deleteChannel,
+            wg: d.wg,
         }
-
-        state.lock.Lock()
-        if len(state.keepMessages) >= maxInflight {
-            fmt.Println("Max inflight for keep messages")
-            break
-        }
-        state.lock.Unlock()
+        deleters = append(deleters, deleter)
     }
+    d.deleters = deleters
+}
 
-    fmt.Println("Reseting visibility on messages to keep")
-    keepChannel := make(chan string, 10000)
-    wg.Add(1)
-    go func() {
-        defer wg.Done()
-        state.lock.Lock()
-        defer state.lock.Unlock()
-        for _, message := range state.keepMessages {
-            keepChannel <- message.ReceiptHandle
-        }
-        state.keepMessages = make(map[string]SQSMessage)
-        close(keepChannel)
-    }()
-    var reseters []*Reseter
+
+func (d *Deduplicator) createReseters() {
+    numWorkers := d.config.numWorkers
+    reseters := make([]*Reseter, 0, numWorkers)
     for i := 0; i < numWorkers; i++ {
         reseter := Reseter{
-            state: &state,
-            client: client,
-            queueUrl: &queueUrl,
-            keepChannel: keepChannel,
+            queue: d.config.queue,
+            keepChannel: d.keepChannel,
+            wg: d.wg,
         }
         reseters = append(reseters, &reseter)
     }
-    for _, reseter := range reseters {
-        reseter.Start()
-    }
-    wg.Wait()
-    fmt.Println("All done")
+    d.reseters = reseters
 }
 
 
-func queueEmpty(pullers []*Puller) bool {
-    for _, puller := range pullers {
+func (d *Deduplicator) createKeepChannel() {
+    d.keepChannel = make(chan string, 10000)
+}
+
+
+func (d *Deduplicator) createDeleteChannel() {
+    d.deleteChannel = make(chan string, 100000)
+}
+
+
+func (d *Deduplicator) queueEmpty() bool {
+    for _, puller := range d.pullers {
         if puller.messagesExist {
             return false
         }
@@ -138,9 +116,104 @@ func queueEmpty(pullers []*Puller) bool {
 }
 
 
+func (d *Deduplicator) sendMessagesToDelete() {
+    d.wg.Add(1)
+    go func() {
+        defer d.wg.Done()
+        d.state.mu.Lock()
+        defer d.state.mu.Unlock()
+        for receiptHandle := range d.state.deleteMessages {
+            d.deleteChannel <- receiptHandle
+        }
+        d.state.deleteMessages = make(map[string]struct{})
+        close(d.deleteChannel)
+    }()
+}
 
-func NewDeduplicator(queue Queue) *Deduplicator {
-    return &Deduplicator{
-        queue: queue,
+
+func (d *Deduplicator) sendMessagesToResetVisibility() {
+    d.wg.Add(1)
+    go func() {
+        defer d.wg.Done()
+        d.state.mu.Lock()
+        defer d.state.mu.Unlock()
+        for _, message := range d.state.keepMessages {
+            d.keepChannel <- message.ReceiptHandle()
+        }
+        d.state.keepMessages = make(map[string]QueueMessage)
+        close(d.keepChannel)
+    }()
+}
+
+
+func (d *Deduplicator) printInfo() {
+    d.state.mu.Lock()
+    fmt.Println("Messages to keep:", len(d.state.keepMessages))
+    fmt.Println("Messages to delete:", len(d.state.deleteMessages))
+    d.state.mu.Unlock()
+}
+
+
+func (d *Deduplicator) atMaxInflight() bool {
+    d.state.mu.Lock()
+    defer d.state.mu.Unlock()
+    if len(d.state.keepMessages) >= d.config.maxInflight {
+       return true
     }
+    return false
+}
+
+
+func (d *Deduplicator) Run() {
+
+    fmt.Println("Running loop")
+    
+    d.createPullers()
+
+    // Run pull message/delete duplicates loop until no more messages, or
+    // max inflight of unique messages reached.
+    for {
+        fmt.Println("Pulling Messages")
+
+        startAll(d.pullers)
+        
+        d.wg.Wait() // Wait for senders
+
+        d.printInfo() // How many messages to keep/delete
+        
+        d.createDeleteChannel() //create new delete channel
+
+        d.createDeleters() // create deleters
+        
+        startAll(d.deleters) // start deleters
+        
+        d.sendMessagesToDelete() // send messages to deleters
+        
+        d.wg.Wait() // Wait for deleters and delete sender
+
+        if d.queueEmpty() {
+            fmt.Println("Queue empty")
+            break
+        }
+
+        if d.atMaxInflight() {
+            fmt.Println("Max inflight for keep messages")
+            break
+        }
+    }
+
+    // Reset the visibility of messages to keep
+    fmt.Println("Reseting visibility on messages to keep")
+    
+    d.createKeepChannel()
+    
+    d.createReseters()
+    
+    startAll(d.reseters)
+    
+    d.sendMessagesToResetVisibility()
+    
+    d.wg.Wait() // Wait for messages to reset
+    
+    fmt.Println("All done")
 }

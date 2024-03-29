@@ -7,9 +7,9 @@ import (
 
 
 type Reseter struct {
-    wg *sync.WaitGroup
     queue Queue
     keepChannel chan string
+    wg *sync.WaitGroup
 }
 
 

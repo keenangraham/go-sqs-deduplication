@@ -7,9 +7,9 @@ import (
 
 
 type Deleter struct {
-    wg *sync.WaitGroup
     queue Queue
     deleteChannel chan string
+    wg *sync.WaitGroup
 }
 
 
