@@ -10,19 +10,19 @@ import (
 
 
 type InvalidationQueueMessageData struct {
-    uuid string `json:"uuid"`
+    UUID string `json:"uuid"`
 }
 
 
 type InvalidationQueueMessage struct {
-    data InvalidationQueueMessageData `json:"data"`
+    Data InvalidationQueueMessageData `json:"data"`
     messageID string
     receiptHandle string
 }
 
 
 func (m InvalidationQueueMessage) UniqueID() string {
-    return m.data.uuid
+    return m.Data.UUID
 }
 
 
@@ -43,7 +43,7 @@ func InvalidationQueueMessageParser(rawMessage types.Message) (dedup.QueueMessag
     var message InvalidationQueueMessage
     err := json.Unmarshal([]byte(*rawMessage.Body), &message)
     if err != nil {
-        fmt.Println("Error unmarshaling message from JSON:", err)
+        fmt.Println("Error unmarshaling message from JSON", err)
         return message, err
     }
     message.receiptHandle = *rawMessage.ReceiptHandle

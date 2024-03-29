@@ -200,7 +200,7 @@ func (d *Deduplicator) pullMessagesAndDeleteDuplicates() {
     // Run pull message/delete duplicates loop until no more
     // messages in queue, or max inflight of unique messages reached.
     for {
-        fmt.Println("Pulling Messages")
+        fmt.Println("Pulling messages")
         d.startPullers() // Pulls messages until max inflight reached, or no more messages. Determines duplicates.
         d.waitForWorkToFinish()
         d.printInfo()
