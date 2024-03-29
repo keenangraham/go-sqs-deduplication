@@ -1,6 +1,6 @@
 # go-sqs-deduplication
 
-Usage:
+### Usage
 
 Run once:
 ```bash
