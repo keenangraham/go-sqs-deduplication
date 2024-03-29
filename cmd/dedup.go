@@ -15,6 +15,11 @@ func main() {
         MessageParser: sqs.InvalidationQueueMessageParser,
     }
     queue := sqs.NewQueue(config)
-    deduplicator := dedup.NewDeduplicator(queue)
+    deduplicator := dedup.NewDeduplicator(
+        &dedup.DeduplicatorConfig{
+            Queue: queue,
+            NumWorkers: 20,
+            MaxInflight: 10000,
+        })
     deduplicator.Run()
 }

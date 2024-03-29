@@ -12,7 +12,7 @@ type Startable interface {
 }
 
 
-func startAll(actors []*Startable) {
+func startAll[T Startable](actors []T) {
     for _, actor := range actors {
         actor.Start()
     }
@@ -20,9 +20,9 @@ func startAll(actors []*Startable) {
 
 
 type DeduplicatorConfig struct {
-    queue Queue
-    numWorkers int
-    maxInflight int
+    Queue Queue
+    NumWorkers int
+    MaxInflight int
 }
 
 
@@ -50,15 +50,15 @@ func NewDeduplicator(config *DeduplicatorConfig) *Deduplicator {
 
 
 func (d *Deduplicator) createPullers() {
-    numWorkers := d.config.numWorkers
+    numWorkers := d.config.NumWorkers
     pullers := make([]*Puller, 0, numWorkers)
     for i := 0; i < numWorkers; i++ {
         puller := &Puller{
-            queue: d.config.queue,
+            queue: d.config.Queue,
             state: d.state,
             wg: d.wg,
             messagesExist: true,
-            maxInflight: d.config.maxInflight,
+            maxInflight: d.config.MaxInflight,
         }
         pullers = append(pullers, puller)
     }
@@ -67,11 +67,11 @@ func (d *Deduplicator) createPullers() {
 
 
 func (d *Deduplicator) createDeleters() {
-    numWorkers := d.config.numWorkers
+    numWorkers := d.config.NumWorkers
     deleters := make([]*Deleter, 0, numWorkers)
     for i := 0; i < numWorkers; i++ {
         deleter := &Deleter{
-            queue: d.config.queue,
+            queue: d.config.Queue,
             deleteChannel: d.deleteChannel,
             wg: d.wg,
         }
@@ -82,11 +82,11 @@ func (d *Deduplicator) createDeleters() {
 
 
 func (d *Deduplicator) createReseters() {
-    numWorkers := d.config.numWorkers
+    numWorkers := d.config.NumWorkers
     reseters := make([]*Reseter, 0, numWorkers)
     for i := 0; i < numWorkers; i++ {
         reseter := Reseter{
-            queue: d.config.queue,
+            queue: d.config.Queue,
             keepChannel: d.keepChannel,
             wg: d.wg,
         }
@@ -157,7 +157,7 @@ func (d *Deduplicator) printInfo() {
 func (d *Deduplicator) atMaxInflight() bool {
     d.state.mu.Lock()
     defer d.state.mu.Unlock()
-    if len(d.state.keepMessages) >= d.config.maxInflight {
+    if len(d.state.keepMessages) >= d.config.MaxInflight {
        return true
     }
     return false
