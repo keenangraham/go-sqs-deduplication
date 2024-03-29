@@ -2,7 +2,7 @@
 
 ### What
 
-The batch deduplicator works by taking as many messages off a queue as possible (up to `maxInflight`) and deleting duplicates based on a unique identifier.
+The batch deduplicator works by taking as many messages off an AWS SQS queue as possible (up to `maxInflight`) and deleting duplicates based on a unique identifier.
 
 
 Note the deduplicator expects SQS messages in following format:
