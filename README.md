@@ -1,6 +1,9 @@
 # go-sqs-deduplication
 
-### Usage
+### What
+
+The batch deduplicator works by taking as many messages off a queue as possible (up to maxInflight) and deleting duplicates based on a unique identifier.
+
 
 Note the deduplicator expects SQS messages in following format:
 
@@ -11,10 +14,11 @@ Note the deduplicator expects SQS messages in following format:
      }
 }
 ```
-
 Where `uuid` is the unique identifier used to deduplicate messages.
 
 The code can be extended to work with other queues or message formats.
+
+### Usage
 
 Run once:
 ```bash
