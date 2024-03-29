@@ -48,3 +48,12 @@ func (d *Deleter) Start() {
         d.deleteMessages()
     }()
 }
+
+
+func NewDeleter(queue Queue, deleteChannel chan string, wg *sync.WaitGroup) *Deleter {
+    return &Deleter{
+        queue: queue,
+        deleteChannel: deleteChannel,
+        wg: wg,
+    }
+}
