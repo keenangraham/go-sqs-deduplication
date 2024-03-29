@@ -46,7 +46,7 @@ func main() {
         ProfileName: opts.ProfileName,
         MessageParser: sqs.InvalidationQueueMessageParser, // Use custom parser for other message formats.
     }
-    queue := sqs.NewQueue(config)
+    queue := sqs.NewQueue(config) // Use different queue implementation for other queue types.
     deduplicator := dedup.NewDeduplicator(
         &dedup.DeduplicatorConfig{
             Queue: queue,
