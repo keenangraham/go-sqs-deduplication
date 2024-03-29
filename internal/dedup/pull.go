@@ -23,6 +23,7 @@ func (p *Puller) processMessages(messages []QueueMessage) {
             if storedMessage.MessageID() != message.MessageID() {
                 p.state.deleteMessages[message.ReceiptHandle()] = struct{}{}
             } else {
+                // If for some reason the same message is delivered more than once from the queue.
                 continue
             }
         } else {
