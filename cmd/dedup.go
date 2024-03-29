@@ -10,8 +10,6 @@ import (
 )
 
 
-
-
 type CommandLineOptions struct {
     QueueURL string
     ProfileName string
