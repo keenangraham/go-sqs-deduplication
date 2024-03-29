@@ -12,14 +12,14 @@ func main() {
     config := &sqs.QueueConfig{
         QueueUrl: &queueUrl,
         ProfileName: "default",
-        MessageParser: sqs.InvalidationQueueMessageParser,
+        MessageParser: sqs.InvalidationQueueMessageParser, // Use custom parser for other message formats.
     }
     queue := sqs.NewQueue(config)
     deduplicator := dedup.NewDeduplicator(
         &dedup.DeduplicatorConfig{
             Queue: queue,
             NumWorkers: 20,
-            MaxInflight: 10000,
+            MaxInflight: 100000,
         })
     deduplicator.Run()
 }
