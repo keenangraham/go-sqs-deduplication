@@ -2,7 +2,7 @@ package main
 
 import (
     "github.com/keenangraham/go-sqs-deduplication/internal/sqs"
-    "github.com/keenangraham/go-sqs-deduplication/internal/services"
+    "github.com/keenangraham/go-sqs-deduplication/internal/dedup"
 )
 
 func main() {
@@ -13,6 +13,6 @@ func main() {
         MessageParser: sqs.InvalidationQueueMessageParser,
     }
     queue := sqs.NewQueue(config)
-    deduplicator := services.NewDeduplicator(queue)
+    deduplicator := dedup.NewDeduplicator(queue)
     deduplicator.Run()
 }

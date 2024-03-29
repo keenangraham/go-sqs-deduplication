@@ -1,9 +1,14 @@
 package dedup
 
 
+import (
+    "sync"
+)
+
+
 type Reseter struct {
     wg *sync.WaitGroup
-    queue *Queue
+    queue Queue
     keepChannel chan string
 }
 
@@ -23,10 +28,10 @@ func (r *Reseter) getBatchOfMessagesToKeep() []string {
 
 
 func (r *Reseter) resetMessages() {
-    messages := r.getBatchOfMessagesToKeep()
-    for len(messages) > 0 {
-        resetVisibilityBatch(r.client, r.queueUrl, messages)
-        messages = r.getBatchOfMessagesToKeep()
+    receiptHandles := r.getBatchOfMessagesToKeep()
+    for len(receiptHandles) > 0 {
+        r.queue.ResetVisibilityBatch(receiptHandles)
+        receiptHandles = r.getBatchOfMessagesToKeep()
     }
 }
 

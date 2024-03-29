@@ -1,9 +1,14 @@
 package dedup
 
 
+import (
+    "sync"
+)
+
+
 type Deleter struct {
     wg *sync.WaitGroup
-    queue *Queue
+    queue Queue
     deleteChannel chan string
 }
 
@@ -23,10 +28,10 @@ func (d *Deleter) getBatchOfMessagesToDelete() []string {
 
 
 func (d *Deleter) deleteMessages() {
-    messages := d.getBatchOfMessagesToDelete()
-    for len(messages) > 0 {
-        deleteMessagesBatch(d.client, d.queueUrl, messages)
-        messages = d.getBatchOfMessagesToDelete()
+    receiptHandles := d.getBatchOfMessagesToDelete()
+    for len(receiptHandles) > 0 {
+        d.queue.DeleteMessagesBatch(receiptHandles)
+        receiptHandles = d.getBatchOfMessagesToDelete()
     }
 }
 

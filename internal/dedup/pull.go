@@ -1,11 +1,39 @@
 package dedup
 
 
+import (
+    "fmt"
+    "sync"
+)
+
+
 type Puller struct {
     wg *sync.WaitGroup
     state *SharedState
-    queue *Queue
+    queue Queue
     messagesExist bool
+}
+
+
+// Only call with mutex locked.
+func (p *Puller) processMessages(messages []QueueMessage) {
+    for _, message := range messages {
+        if storedMessage, exists := p.state.keepMessages[message.UniqueID()]; exists {
+            if storedMessage.MessageID() != message.MessageID() {
+                p.state.deleteMessages[message.ReceiptHandle()] = struct{}{}
+            } else {
+                continue
+            }
+        } else {
+            p.state.keepMessages[message.UniqueID()] = message
+        }
+    }
+}
+
+
+// Only call with mutex locked.
+func (p *Puller) atMaxInflight() bool {
+    return len(p.state.keepMessages) + len(p.state.deleteMessages) >= p.state.maxInflightMessages
 }
 
 
@@ -21,18 +49,8 @@ func (p *Puller) getMessagesUntilMaxInflight() {
             break
         }
         p.state.mu.Lock()
-        for _, message := range messages {
-            if storedMessage, exists := p.state.keepMessages[message.Data.UUID]; exists {
-                if storedMessage.MessageId != message.MessageId {
-                    p.state.deleteMessages[message.ReceiptHandle] = struct{}{}
-                } else {
-                    continue
-                }
-            } else {
-                p.state.keepMessages[message.Data.UUID] = message
-            }
-        }
-        if len(p.state.keepMessages) + len(p.state.deleteMessages) >= p.state.maxInflightMessages {
+        p.processMessages(messages)
+        if p.atMaxInflight() {
             fmt.Println("Reaching max inflight messages from puller")
             p.state.mu.Unlock()
             break

@@ -1,14 +1,13 @@
-package services
+package dedup
 
 
 import (
     "fmt"
-    "github.com/keenangraham/go-sqs-deduplication/internal/dedup"
 )
 
 
 type Deduplicator struct {
-    queue dedup.Queue
+    queue Queue
 }
 
 
@@ -17,7 +16,7 @@ func (d *Deduplicator) Run() {
 }
 
 
-func NewDeduplicator(queue dedup.Queue) *Deduplicator {
+func NewDeduplicator(queue Queue) *Deduplicator {
     return &Deduplicator{
         queue: queue,
     }
