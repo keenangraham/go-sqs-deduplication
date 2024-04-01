@@ -24,7 +24,7 @@ func TestDeduplicatorHalfDuplicate(t *testing.T) {
         t.Errorf("Expected 1000 messages to be deleted, got %d", len(inMemoryQueue.GetDeletedMessages()))
     }
     if len(inMemoryQueue.GetResetMessages()) != 1000 {
-        t.Errorf("Expected 10000 messages to be reset, got %d", len(inMemoryQueue.GetResetMessages()))
+        t.Errorf("Expected 1000 messages to be reset, got %d", len(inMemoryQueue.GetResetMessages()))
     }
     if inMemoryQueue.MessagesLen() != 0 {
         t.Error("Queue should be empty")
