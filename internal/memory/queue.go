@@ -86,3 +86,10 @@ func (q *InMemoryQueue) GetResetMessages() []string {
 	defer q.mu.Unlock()
 	return q.resetMessages
 }
+
+
+func (q *InMemoryQueue) MessagesLen() int {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return len(q.messages)
+}

@@ -43,3 +43,12 @@ func (r *Reseter) Start() {
         r.resetMessages()
     }()
 }
+
+
+func NewReseter(queue Queue, keepChannel chan string, wg *sync.WaitGroup) *Reseter {
+    return &Reseter{
+        queue: queue,
+        keepChannel: keepChannel,
+        wg: wg,
+    }
+}

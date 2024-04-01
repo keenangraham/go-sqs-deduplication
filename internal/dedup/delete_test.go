@@ -26,4 +26,7 @@ func TestDeleter(t *testing.T) {
     if len(inMemoryQueue.GetDeletedMessages()) != 10 {
         t.Errorf("Expected 10 messages to be deleted, got %d", len(inMemoryQueue.GetDeletedMessages()))
     }
+    if inMemoryQueue.MessagesLen() != 90 {
+        t.Error("Unexpected number of messages in queue")
+    }
 }

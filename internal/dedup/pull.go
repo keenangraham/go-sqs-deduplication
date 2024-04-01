@@ -70,3 +70,19 @@ func (p *Puller) Start() {
         p.getMessagesUntilMaxInflight()
     }()
 }
+
+
+func (p *Puller) MessagesExist() bool {
+    return p.messagesExist
+}
+
+
+func NewPuller(queue Queue, state *SharedState, messagesExist bool, maxInflight int,  wg *sync.WaitGroup) *Puller {
+    return &Puller{
+        queue: queue,
+        state: state,
+        messagesExist: messagesExist,
+        maxInflight: maxInflight,
+        wg: wg,
+    }
+}
