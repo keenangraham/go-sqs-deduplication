@@ -5,7 +5,7 @@
 The batch deduplicator works by taking as many messages off an AWS SQS queue as possible (up to `maxInflight`) and deleting duplicates based on a unique identifier.
 
 
-Note the deduplicator expects SQS messages in following format:
+The deduplicator expects SQS messages in following format:
 
 ```json
 {
@@ -44,4 +44,9 @@ Help:
     	Runs in a loop with secondsToSleepBetweenRuns
   -secondsToSleepBetweenRuns int
     	Time to sleep between runs if running forever (default 60)
+```
+
+Run tests:
+```
+$ go test ./...
 ```
