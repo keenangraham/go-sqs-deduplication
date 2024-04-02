@@ -82,7 +82,7 @@ func (q *Queue) DeleteMessagesBatch(receiptHandles []string) {
     input := _sqs.DeleteMessageBatchInput{
 		Entries:  entries,
 		QueueUrl: q.config.QueueUrl,
-	}
+    }
 	result, err := q.client.DeleteMessageBatch(context.TODO(), &input)
 	if err != nil {
         fmt.Println("Error deleting batch", err)
