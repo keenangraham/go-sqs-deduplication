@@ -21,7 +21,7 @@ jobs:
         run: go test ./...
       
       - name: Build Binary
-        run: GOOS=linux GOARCH=amd64 go build -o dedup cmd/dedup.go
+        run: GOOS=linux GOARCH=amd64 go build -o dedup-linux-amd64 cmd/dedup.go
 
       - name: Create Release
         id: create_release
@@ -40,6 +40,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dedup
-          asset_name: dedup
+          asset_path: ./dedup-linux-amd64
+          asset_name: dedup-linux-amd64
           asset_content_type: application/octet-stream
