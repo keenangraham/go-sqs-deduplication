@@ -10,6 +10,9 @@ import (
 )
 
 
+var Version = "development"
+
+
 type CommandLineOptions struct {
     QueueURL string
     ProfileName string
@@ -17,6 +20,7 @@ type CommandLineOptions struct {
     MaxInflight int
     RunForever bool
     SecondsToSleepBetweenRuns int
+    ShowVersion bool
 }
 
 
@@ -28,7 +32,12 @@ func parseCommandLineOptions() CommandLineOptions {
     flag.IntVar(&opts.MaxInflight, "maxInflight", 100000, "Maximum number of inflight messages allowed by queue")
     flag.BoolVar(&opts.RunForever, "runForever", false, "Runs in a loop with secondsToSleepBetweenRuns")
     flag.IntVar(&opts.SecondsToSleepBetweenRuns,"secondsToSleepBetweenRuns", 60, "Time to sleep between runs if running forever")
+    flag.BoolVar(&opts.ShowVersion, "version", false, "Show version")
     flag.Parse()
+    if opts.ShowVersion {
+        fmt.Println(Version)
+        os.Exit(0)
+    }
     if opts.QueueURL == "" {
         fmt.Println("The 'queueURL' flag is required")
         flag.PrintDefaults()
