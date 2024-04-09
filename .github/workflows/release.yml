@@ -20,8 +20,13 @@ jobs:
       - name: Run Tests
         run: go test ./...
       
-      - name: Build Binary
+      # Build Binary for Linux AMD64
+      - name: Build Linux AMD64 Binary
         run: GOOS=linux GOARCH=amd64 go build -o dedup-linux-amd64 cmd/dedup.go
+
+      # Build Binary for macOS ARM64 (M1, M2, ...)
+      - name: Build macOS ARM64 Binary
+        run: GOOS=darwin GOARCH=arm64 go build -o dedup-darwin-arm64 cmd/dedup.go
 
       - name: Create Release
         id: create_release
@@ -30,11 +35,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
-          release_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
 
-      - name: Upload Release Asset
+      # Upload Linux AMD64 Binary
+      - name: Upload Linux AMD64 Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -42,4 +48,15 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./dedup-linux-amd64
           asset_name: dedup-linux-amd64
+          asset_content_type: application/octet-stream
+
+      # Upload macOS ARM64 Binary
+      - name: Upload macOS ARM64 Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dedup-darwin-arm64
+          asset_name: dedup-darwin-arm64
           asset_content_type: application/octet-stream
