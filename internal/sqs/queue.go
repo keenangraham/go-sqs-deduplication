@@ -15,14 +15,21 @@ import (
 
 func getClient(profileName string) *_sqs.Client {
     config, err := config.LoadDefaultConfig(
-         context.TODO(), 
-         config.WithSharedConfigProfile(profileName),
+        context.TODO(),
+        config.WithSharedConfigProfile(profileName),
     )
     if err != nil {
         fmt.Println("error creating SQS client", err)
         os.Exit(1)
     }
-    return _sqs.NewFromConfig(config)
+    return _sqs.NewFromConfig(
+        config,
+        func (o *_sqs.Options) {
+            if localstackURL := os.Getenv("LOCALSTACK_ENDPOINT_URL"); localstackURL != "" {
+                o.BaseEndpoint = aws.String(localstackURL)
+            }
+        },
+    )
 }
 
 
