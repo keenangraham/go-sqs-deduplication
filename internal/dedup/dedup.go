@@ -62,6 +62,7 @@ func (d *Deduplicator) initPullers() {
             messagesExist: true,
             timedOut: false,
             maxInflight: d.config.MaxInflight,
+            timeLimitInSeconds: 240,
         }
         pullers = append(pullers, puller)
     }
