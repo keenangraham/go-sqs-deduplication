@@ -231,7 +231,7 @@ func (d *Deduplicator) pullMessagesAndDeleteDuplicates() {
             break
         }
         if d.timedOut() {
-            fmt.Println("Reached time limit")
+            fmt.Println("Stopping because of time limit")
             break
         }
         d.resetDeleteChannel() // Give deleters new channel since old one closed.
