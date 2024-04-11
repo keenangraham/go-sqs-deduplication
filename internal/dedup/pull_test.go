@@ -22,6 +22,7 @@ func TestPullerAllUnique(t *testing.T) {
         inMemoryQueue,
         state,
         true,
+        false,
         1000,
         wg,
     )
@@ -29,6 +30,7 @@ func TestPullerAllUnique(t *testing.T) {
         inMemoryQueue,
         state,
         true,
+        false,
         1000,
         wg,
     )
@@ -62,6 +64,7 @@ func TestPullerHalfDuplicates(t *testing.T) {
         inMemoryQueue,
         state,
         true,
+        false,
         1000,
         wg,
     )
@@ -69,6 +72,7 @@ func TestPullerHalfDuplicates(t *testing.T) {
         inMemoryQueue,
         state,
         true,
+        false,
         1000,
         wg,
     )
@@ -97,6 +101,7 @@ func TestPullerAllDuplicates(t *testing.T) {
         inMemoryQueue,
         state,
         true,
+        false,
         1000,
         wg,
     )
@@ -104,6 +109,7 @@ func TestPullerAllDuplicates(t *testing.T) {
         inMemoryQueue,
         state,
         true,
+        false,
         1000,
         wg,
     )
@@ -132,6 +138,7 @@ func TestPullerMaxInflight(t *testing.T) {
         inMemoryQueue,
         state,
         true,
+        false,
         100,
         wg,
     )
@@ -139,6 +146,7 @@ func TestPullerMaxInflight(t *testing.T) {
         inMemoryQueue,
         state,
         true,
+        false,
         100,
         wg,
     )

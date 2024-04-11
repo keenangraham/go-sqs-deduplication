@@ -3,12 +3,14 @@ package dedup
 
 import (
     "sync"
+    "time"
 )
 
 
 type SharedState struct {
     keepMessages map[string]QueueMessage
     deleteMessages map[string]struct{}
+    startTime time.Time
     mu sync.Mutex
 }
 
@@ -31,5 +33,6 @@ func NewSharedState(keepMessages map[string]QueueMessage, deleteMessages map[str
     return &SharedState{
         keepMessages: keepMessages,
         deleteMessages: deleteMessages,
+        startTime: time.Now(),
     }
 }

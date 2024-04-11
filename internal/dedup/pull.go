@@ -4,6 +4,7 @@ package dedup
 import (
     "fmt"
     "sync"
+    "time"
 )
 
 
@@ -11,6 +12,7 @@ type Puller struct {
     queue Queue
     state *SharedState
     messagesExist bool
+    timedOut bool
     maxInflight int
     wg *sync.WaitGroup
 }
@@ -39,6 +41,15 @@ func (p *Puller) atMaxInflight() bool {
 }
 
 
+// Only call with mutex locked.
+func (p *Puller) atTimeout() bool {
+    if time.Since(p.state.startTime) > 4 * time.Minute {
+        return true
+    }
+    return false
+}
+
+
 func (p *Puller) getMessagesUntilMaxInflight() {
     for {
         messages, err := p.queue.PullMessagesBatch()
@@ -55,6 +66,12 @@ func (p *Puller) getMessagesUntilMaxInflight() {
         p.processMessages(messages)
         if p.atMaxInflight() {
             fmt.Println("Reaching max inflight messages from puller")
+            p.state.mu.Unlock()
+            break
+        }
+        if p.atTimeout() {
+            fmt.Println("Reaching time limit from puller")
+            p.timedOut = true
             p.state.mu.Unlock()
             break
         }
@@ -77,12 +94,13 @@ func (p *Puller) MessagesExist() bool {
 }
 
 
-func NewPuller(queue Queue, state *SharedState, messagesExist bool, maxInflight int,  wg *sync.WaitGroup) *Puller {
+func NewPuller(queue Queue, state *SharedState, messagesExist bool, timedOut bool, maxInflight int, wg *sync.WaitGroup) *Puller {
     return &Puller{
         queue: queue,
         state: state,
         messagesExist: messagesExist,
         maxInflight: maxInflight,
+        timedOut: timedOut,
         wg: wg,
     }
 }
