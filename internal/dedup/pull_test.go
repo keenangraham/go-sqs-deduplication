@@ -212,6 +212,6 @@ func TestPullerTimedOut(t *testing.T) {
         t.Errorf("Unexpected duplicate messages to delete %d", state.DeleteMessagesLen())
     }
     if !puller1.TimedOut() && !puller2.TimedOut() {
-        t.Errorf("Expected messages to exist on puller")
+        t.Errorf("Expected workers to have timed out")
     }
 }
