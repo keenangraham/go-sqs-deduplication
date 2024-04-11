@@ -46,6 +46,7 @@ func NewDeduplicator(config *DeduplicatorConfig) *Deduplicator {
         state: &SharedState{
             keepMessages: make(map[string]QueueMessage),
             deleteMessages: make(map[string]struct{}),
+            startTime: time.Now(),
         }}
 }
 
@@ -59,7 +60,9 @@ func (d *Deduplicator) initPullers() {
             state: d.state,
             wg: d.wg,
             messagesExist: true,
+            timedOut: false,
             maxInflight: d.config.MaxInflight,
+            timeLimitInSeconds: 240,
         }
         pullers = append(pullers, puller)
     }
@@ -142,6 +145,16 @@ func (d *Deduplicator) queueEmpty() bool {
 }
 
 
+func (d *Deduplicator) timedOut() bool {
+    for _, puller := range d.pullers {
+        if puller.timedOut {
+            return true
+        }
+    }
+    return false
+}
+
+
 func (d *Deduplicator) sendMessagesForDeletion() {
     d.wg.Add(1)
     go func() {
@@ -215,6 +228,10 @@ func (d *Deduplicator) pullMessagesAndDeleteDuplicates() {
         }
         if d.atMaxInflight() {
             fmt.Println("Max inflight for keep messages")
+            break
+        }
+        if d.timedOut() {
+            fmt.Println("Stopping because of time limit")
             break
         }
         d.resetDeleteChannel() // Give deleters new channel since old one closed.
